@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "host.h"
 #include "timer.h"
 #include "print.h"
-#include "report.h"
 #include "debug.h"
 #include "ps2.h"
 
@@ -130,6 +129,16 @@ void ps2_mouse_set_resolution(ps2_mouse_resolution_t resolution) { PS2_MOUSE_SET
 
 void ps2_mouse_set_sample_rate(ps2_mouse_sample_rate_t sample_rate) { PS2_MOUSE_SET_SAFE(PS2_MOUSE_SET_SAMPLE_RATE, sample_rate, "ps2 mouse set sample rate"); }
 
+void ps2_mouse_report_quantum(report_mouse_t *mouse_report) { ps2_mouse_report_kb(mouse_report); }
+
+__attribute__((weak)) void ps2_mouse_report_kb(report_mouse_t *mouse_report) { ps2_mouse_report_user(mouse_report); }
+
+__attribute__((weak)) void ps2_mouse_report_user(report_mouse_t *mouse_report) {
+#ifdef PS2_MOUSE_BUTTONS_REMAP
+    MOUSE_BTN_MAP(mouse_report->buttons);
+#endif
+}
+
 /* ============================= HELPERS ============================ */
 
 #define X_IS_NEG (mouse_report->buttons & (1 << PS2_MOUSE_X_SIGN))
@@ -149,6 +158,9 @@ static inline void ps2_mouse_convert_report_to_hid(report_mouse_t *mouse_report)
 
     // remove sign and overflow flags
     mouse_report->buttons &= PS2_MOUSE_BTN_MASK;
+
+    // pass mouse_report to ps2_mouse_report_quantum()
+    ps2_mouse_report_quantum(mouse_report);
 
 #ifdef PS2_MOUSE_INVERT_X
     mouse_report->x = -mouse_report->x;

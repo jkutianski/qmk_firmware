@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PS2_MOUSE_H
 
 #include <stdbool.h>
+#include "report.h"
 #include "debug.h"
 
 #define PS2_MOUSE_SEND(command, message)                                                \
@@ -67,6 +68,7 @@ __attribute__((unused)) static enum ps2_mouse_mode_e {
     PS2_MOUSE_REMOTE_MODE,
 } ps2_mouse_mode = PS2_MOUSE_STREAM_MODE;
 
+
 /*
  * Data format:
  * byte|7       6       5       4       3       2       1       0
@@ -84,7 +86,37 @@ __attribute__((unused)) static enum ps2_mouse_mode_e {
 #define PS2_MOUSE_X_OVFLW 6
 #define PS2_MOUSE_Y_OVFLW 7
 
+/* enable PS2 mouse buttons mapping */
+#ifndef PS2_MOUSE_BUTTONS_REMAP
+#   if defined(REMAP_MOUSE_BTN_LEFT) | defined(REMAP_MOUSE_BTN_RIGHT) | defined(REMAP_MOUSE_BTN_MIDDLE)
+#       define PS2_MOUSE_BUTTONS_REMAP
+#   endif
+#endif
+
+/* mapping PS2 mouse buttons to HID mouse buttons */
+#ifndef REMAP_MOUSE_BTN_LEFT
+#   define REMAP_MOUSE_BTN_LEFT (PS2_MOUSE_BTN_LEFT)
+#endif
+#ifndef REMAP_MOUSE_BTN_RIGHT
+#   define REMAP_MOUSE_BTN_RIGHT (PS2_MOUSE_BTN_RIGHT)
+#endif
+#ifndef REMAP_MOUSE_BTN_MIDDLE
+#   define REMAP_MOUSE_BTN_MIDDLE (PS2_MOUSE_BTN_MIDDLE)
+#endif
+
+/* change PS2 mouse buttons to HID mouse buttons */
+#ifndef MOUSE_BTN_MAP
+#   define MOUSE_BTN_MAP(report_buttons)                                       \
+        do {                                                                                \
+            uint8_t btn_left = ((report_buttons >> PS2_MOUSE_BTN_LEFT) ^ (report_buttons >> REMAP_MOUSE_BTN_LEFT)) & 1;     \
+            uint8_t btn_rigth = ((report_buttons >> PS2_MOUSE_BTN_RIGHT) ^ (report_buttons >> REMAP_MOUSE_BTN_RIGHT)) & 1;   \
+            uint8_t btn_middle = ((report_buttons >> PS2_MOUSE_BTN_MIDDLE) ^ (report_buttons >> REMAP_MOUSE_BTN_MIDDLE)) & 1; \
+            report_buttons ^= (btn_left << REMAP_MOUSE_BTN_LEFT) | (btn_rigth << REMAP_MOUSE_BTN_RIGHT) |  (btn_middle << REMAP_MOUSE_BTN_MIDDLE);    \
+        } while (0)
+#endif
+
 /* mouse button to start scrolling; set 0 to disable scroll */
+/* Don't use REMAP_MOUSE_BTN here (this is the button after remap)*/
 #ifndef PS2_MOUSE_SCROLL_BTN_MASK
 #    define PS2_MOUSE_SCROLL_BTN_MASK (1 << PS2_MOUSE_BTN_MIDDLE)
 #endif
@@ -173,5 +205,11 @@ void ps2_mouse_set_scaling_1_1(void);
 void ps2_mouse_set_resolution(ps2_mouse_resolution_t resolution);
 
 void ps2_mouse_set_sample_rate(ps2_mouse_sample_rate_t sample_rate);
+
+void ps2_mouse_report_quantum(report_mouse_t *mouse_report);
+
+void ps2_mouse_report_kb(report_mouse_t *mouse_report);
+
+void ps2_mouse_report_user(report_mouse_t *mouse_report);
 
 #endif
